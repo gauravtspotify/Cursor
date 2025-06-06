@@ -23,6 +23,9 @@
                 <a href="#careers">Careers</a>
             </div>
             <div class="nav-actions">
+                <button class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-icon">🌙</span>
+                </button>
                 <a href="#signin" class="signin-btn">Sign in</a>
                 <a href="#download" class="download-btn">Download</a>
             </div>
@@ -298,5 +301,38 @@
             </div>
         </div>
     </footer>
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.querySelector('.theme-toggle');
+        const themeIcon = document.querySelector('.theme-toggle-icon');
+        const body = document.body;
+
+        // Check for saved theme preference or default to dark
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        
+        // Apply the theme on page load
+        if (currentTheme === 'light') {
+            body.setAttribute('data-theme', 'light');
+            themeIcon.textContent = '☀️';
+        } else {
+            body.removeAttribute('data-theme');
+            themeIcon.textContent = '🌙';
+        }
+
+        // Toggle theme when button is clicked
+        themeToggle.addEventListener('click', function() {
+            const isLight = body.getAttribute('data-theme') === 'light';
+            
+            if (isLight) {
+                body.removeAttribute('data-theme');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
 </body>
 </html>
