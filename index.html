@@ -448,6 +448,12 @@
         const themeIcon = document.querySelector('.theme-toggle-icon');
         const body = document.body;
 
+        // Generate session ID for analytics tracking
+        if (!localStorage.getItem('session_id')) {
+            const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('session_id', sessionId);
+        }
+
         // Check for saved theme preference or default to dark
         const currentTheme = localStorage.getItem('theme') || 'dark';
         
@@ -460,9 +466,108 @@
             themeIcon.textContent = '🌙';
         }
 
+        // Theme Toggle Event Tracking System
+        function trackThemeToggle(fromTheme, toTheme) {
+            const eventData = {
+                event: 'theme_toggle',
+                timestamp: new Date().toISOString(),
+                from_theme: fromTheme,
+                to_theme: toTheme,
+                user_agent: navigator.userAgent,
+                page_url: window.location.href,
+                screen_size: `${window.innerWidth}x${window.innerHeight}`,
+                session_id: localStorage.getItem('session_id') || 'anonymous'
+            };
+            
+            // 1. Local Event Storage - Store in localStorage
+            const themeEvents = JSON.parse(localStorage.getItem('theme_events') || '[]');
+            themeEvents.push(eventData);
+            // Keep last 50 events to prevent storage bloat
+            const recentEvents = themeEvents.slice(-50);
+            localStorage.setItem('theme_events', JSON.stringify(recentEvents));
+            
+            // 2. Console Logging - Log to browser console for debugging
+            console.log('🎨 Theme Toggle Event:', eventData);
+            console.table([eventData]);
+            
+            // 3. Analytics Integration Ready
+            // Google Analytics (gtag)
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'theme_toggle', {
+                    event_category: 'User Interface',
+                    event_label: `${fromTheme}_to_${toTheme}`,
+                    custom_parameter_from: fromTheme,
+                    custom_parameter_to: toTheme
+                });
+                console.log('📊 Sent to Google Analytics');
+            }
+            
+            // Mixpanel
+            if (typeof mixpanel !== 'undefined') {
+                mixpanel.track('Theme Toggle', eventData);
+                console.log('📊 Sent to Mixpanel');
+            }
+            
+            // PostHog
+            if (typeof posthog !== 'undefined') {
+                posthog.capture('theme_toggle', eventData);
+                console.log('📊 Sent to PostHog');
+            }
+            
+            // Amplitude
+            if (typeof amplitude !== 'undefined') {
+                amplitude.getInstance().logEvent('Theme Toggle', eventData);
+                console.log('📊 Sent to Amplitude');
+            }
+            
+            console.log('✅ Theme toggle event tracked successfully');
+        }
+
+        // 4. Analytics Utility Function - Accessible from Developer Console
+        window.getThemeAnalytics = function() {
+            const events = JSON.parse(localStorage.getItem('theme_events') || '[]');
+            
+            if (events.length === 0) {
+                console.log('📊 No theme toggle events found');
+                return { events: [], summary: {} };
+            }
+            
+            console.log('📊 Theme Toggle Analytics:');
+            console.table(events);
+            
+            // Calculate summary statistics
+            const summary = events.reduce((acc, event) => {
+                const key = `${event.from_theme}_to_${event.to_theme}`;
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
+            
+            const totalToggles = events.length;
+            const uniqueSessions = [...new Set(events.map(e => e.session_id))].length;
+            const timeRange = events.length > 1 ? {
+                first: events[0].timestamp,
+                last: events[events.length - 1].timestamp
+            } : null;
+            
+            const analytics = {
+                total_toggles: totalToggles,
+                unique_sessions: uniqueSessions,
+                toggle_patterns: summary,
+                time_range: timeRange,
+                most_common_toggle: Object.entries(summary).sort(([,a], [,b]) => b - a)[0] || null
+            };
+            
+            console.log('📈 Theme Toggle Summary:', analytics);
+            console.log('🎯 Usage Patterns:', summary);
+            
+            return { events, summary: analytics };
+        };
+
         // Toggle theme when button is clicked
         themeToggle.addEventListener('click', function() {
             const isLight = body.getAttribute('data-theme') === 'light';
+            const fromTheme = isLight ? 'light' : 'dark';
+            const toTheme = isLight ? 'dark' : 'light';
             
             if (isLight) {
                 body.removeAttribute('data-theme');
@@ -473,6 +578,9 @@
                 themeIcon.textContent = '☀️';
                 localStorage.setItem('theme', 'light');
             }
+            
+            // Track the theme toggle event
+            trackThemeToggle(fromTheme, toTheme);
         });
 
         // Features Carousel functionality
